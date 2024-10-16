@@ -24,6 +24,7 @@ type ActionsProps = {
 
 const BlockActions = ({ block, editor, dragHandleProps, onChangeActiveBlock, showActions }: ActionsProps) => {
   const [isBlockOptionsOpen, setIsBlockOptionsOpen] = useState<boolean>(false);
+  const [dragStart, setDragStart] = useState<boolean>(false);
 
   const {
     isActionMenuOpen,
@@ -138,9 +139,52 @@ const BlockActions = ({ block, editor, dragHandleProps, onChangeActiveBlock, sho
         className="yoopta-block-actions-drag"
         ref={onDragButtonRef}
         {...attributes}
-        {...listeners}
+        {...listeners} // something in the listeners is preventing an onDragEnd trigger, removing this breaks the entire dnd functionality
         onClick={onSelectBlock}
-        onMouseDown={(e) => e.stopPropagation()}
+        onDragStart={() => setDragStart(true)}
+        onMouseUp={(event) => {
+          console.log(
+            'screen x & y: ',
+            event.screenX,
+            ' ',
+            event.screenY,
+            '\n page x & y: ',
+            event.pageX,
+            ' ',
+            event.pageY,
+            '\n client x & y: ',
+            event.clientX,
+            ' ',
+            event.clientY,
+          );
+          if (dragStart) {
+            const parent = (event.target as HTMLElement).parentElement?.parentElement;
+            if (parent) parent.style.pointerEvents = 'none';
+
+            const { clientX, clientY } = event;
+            const droppedElement = document.elementFromPoint(clientX, clientY);
+            if (droppedElement) {
+              function findBlock(element) {
+                while (element) {
+                  if (element.hasAttribute('data-yoopta-block-id')) {
+                    const id = element.getAttribute('data-yoopta-block-id');
+                    return id;
+                  }
+                  element = element.parentElement;
+                }
+                return null;
+              }
+              const droppedBlockId = findBlock(droppedElement);
+              console.log('droppedBlockId: ', droppedBlockId);
+              if (!editor.children[droppedBlockId])
+                window.postMessage({ message: 'onBlockDropped', id: droppedBlockId, block, clientX, clientY });
+            }
+            setDragStart(false);
+            if (parent) parent.style.pointerEvents = 'auto';
+          }
+        }}
+        onMouseDown={(e) => e.stopPropagation()} // Removing causing were visual issues with dnd
+        draggable={true}
       >
         <DragIcon />
       </button>
