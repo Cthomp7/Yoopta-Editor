@@ -15,6 +15,7 @@ export function setBlockSelected(editor: YooEditor, paths: number[] | null, opti
 
   if (paths === null) {
     editor.selectedBlocks = null;
+    // HERE is where the selection is disabled but causes some weird behaviors
   } else {
     if (paths.length > 1) {
       editor.selectedBlocks = paths;
